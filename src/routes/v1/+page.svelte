@@ -2,45 +2,62 @@
     import { page } from '$app/stores';
     import { browser } from '$app/environment';
     import QRCodeStyling from 'qr-code-styling';
-    import type { 
-        Options, 
-        DotType, 
-        CornerSquareType, 
-        CornerDotType 
-    } from 'qr-code-styling';
+    import { QR_DEFAULTS } from '$lib/defaults';
+    import type { Options, CornerDotType } from 'qr-code-styling';
 
+    // --- State ---
     let qrContainer = $state<HTMLElement | null>(null);
     let qrCodeInstance = $state<QRCodeStyling | null>(null);
 
-    // Track the container dimensions
+    // Track container dimensions for dynamic resizing
     let containerW = $state(0);
     let containerH = $state(0);
 
-    let url = $derived(browser ? $page.url.searchParams.get('url') : null);
+    // --- Reactive Parameters ---
+    // We use derived values to safely extract params or fall back to defaults
     
-    // Fallback size only if container is 0 (e.g. server-side)
-    let initialSize = $derived(browser ? (Number($page.url.searchParams.get('size')) || 500) : 500);
+    let url = $derived(browser ? $page.url.searchParams.get('url') : null);
 
-    // Calculate the square size based on the smallest dimension of the window/iframe
+    // Helper to safely parse numbers (so "0" doesn't become the default)
+    function getNumParam(key: string, defaultVal: number): number {
+        if (!browser) return defaultVal;
+        const val = $page.url.searchParams.get(key);
+        return val !== null ? Number(val) : defaultVal;
+    }
+
+    // Helper to safely parse strings
+    function getStrParam<T extends string>(key: string, defaultVal: T): T {
+        if (!browser) return defaultVal;
+        return ($page.url.searchParams.get(key) as T) ?? defaultVal;
+    }
+
+    // 1. Dimensions
+    // Use the container's smallest side, otherwise fall back to URL param, otherwise default constant
+    let initialSize = $derived(getNumParam('size', QR_DEFAULTS.size));
     let dynamicSize = $derived(
         (containerW > 0 && containerH > 0) 
         ? Math.min(containerW, containerH) 
         : initialSize
     );
 
-    let dotColor = $derived(browser ? ($page.url.searchParams.get('dotColor') || '#000000') : '#000000');
-    let bgColor = $derived(browser ? ($page.url.searchParams.get('bgColor') || 'transparent') : 'transparent');
-    let dotType = $derived(browser ? (($page.url.searchParams.get('dotType') as DotType) || 'rounded') : 'rounded');
-    let cornerType = $derived(browser ? (($page.url.searchParams.get('cornerType') as CornerSquareType) || 'extra-rounded') : 'extra-rounded');
-    let cornerColor = $derived(browser ? ($page.url.searchParams.get('cornerColor') || '#000000') : '#000000');
-    let margin = $derived(browser ? (Number($page.url.searchParams.get('margin')) || 20) : 20);
+    let margin = $derived(getNumParam('margin', QR_DEFAULTS.margin));
 
+    // 2. Colors
+    let dotColor = $derived(getStrParam('dotColor', QR_DEFAULTS.dotColor));
+    let bgColor = $derived(getStrParam('bgColor', QR_DEFAULTS.bgColor));
+    let cornerColor = $derived(getStrParam('cornerColor', QR_DEFAULTS.cornerColor));
+
+    // 3. Shapes
+    let dotType = $derived(getStrParam('dotType', QR_DEFAULTS.dotType));
+    let cornerType = $derived(getStrParam('cornerType', QR_DEFAULTS.cornerType));
+
+    // --- Effect ---
     $effect(() => {
         if (!url || !browser) return;
 
         const options: Options = {
-            width: dynamicSize,   // Use the calculated dynamic size
-            height: dynamicSize,  // Keep it square
+            width: dynamicSize,
+            height: dynamicSize,
             type: 'svg',
             data: url,
             image: '',
@@ -77,7 +94,7 @@
         <div class="qr-wrapper" bind:this={qrContainer}></div>
     </main>
 {:else}
-    <p style="opacity: 0;">Loading...</p>
+    <div class="loading"></div>
 {/if}
 
 <style>
@@ -85,14 +102,12 @@
         margin: 0;
         padding: 0;
         background: transparent;
-        /* Ensure body fills the iframe */
         width: 100vw;
         height: 100vh;
-        overflow: hidden; /* Prevent scrollbars during resize */
+        overflow: hidden;
     }
 
     main {
-        /* Main acts as the measuring container */
         width: 100%;
         height: 100%;
         display: flex;
@@ -101,10 +116,8 @@
     }
 
     .qr-wrapper {
-        border-radius: 20px;
-        overflow: hidden;
+        /* Optional: Smoothly animate size changes */
+        transition: all 0.1s ease-out;
         line-height: 0;
-        /* Optional: Smooth transition when resizing */
-        transition: all 0.1s ease-out; 
     }
 </style>

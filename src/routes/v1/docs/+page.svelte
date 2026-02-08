@@ -1,45 +1,53 @@
 <script lang="ts">
-	import { base } from '$app/paths';
-	
-	// --- State ---
-	let targetUrl = $state('https://github.com');
-	let size = $state(500);
-	let margin = $state(20);
-	
-	// Colors
-	let dotColor = $state('#000000');
-	let cornerColor = $state('#000000');
-	
-	// Background Logic
-	let isBgTransparent = $state(true);
-	let bgHex = $state('#ffffff');
-	let bgColor = $derived(isBgTransparent ? 'transparent' : bgHex);
+    import { base } from '$app/paths';
+    import { QR_DEFAULTS } from '$lib/defaults';
+    
+    let targetUrl = $state('');
+    let size = $state(QR_DEFAULTS.size);
+    let margin = $state(QR_DEFAULTS.margin);
+    
+    // Colors
+    let dotColor = $state(QR_DEFAULTS.dotColor);
+    let cornerColor = $state(QR_DEFAULTS.cornerColor);
+    
+    // Background Logic
+    // We treat 'transparent' as the default for the logic check
+    let isBgTransparent = $state(QR_DEFAULTS.bgColor === 'transparent');
+    let bgHex = $state('#ffffff'); 
+    let bgColor = $derived(isBgTransparent ? 'transparent' : bgHex);
 
-	// Shapes
-	let dotType = $state('rounded');
-	let cornerType = $state('extra-rounded');
+    // Shapes
+    let dotType = $state(QR_DEFAULTS.dotType);
+    let cornerType = $state(QR_DEFAULTS.cornerType);
 
-	// --- Derived URLs ---
-	let origin = $state('');
-	
-	$effect(() => {
-		// Get the current window origin (e.g., https://user.github.io)
-		origin = window.location.origin;
-	});
+    // --- Derived URLs ---
+    let origin = $state('');
+    
+    $effect(() => {
+        origin = window.location.origin;
+    });
 
-	let embedUrl = $derived.by(() => {
-		const params = new URLSearchParams();
-		params.set('url', targetUrl);
-		params.set('size', size.toString());
-		params.set('margin', margin.toString());
-		params.set('dotColor', dotColor);
-		params.set('bgColor', bgColor);
-		params.set('dotType', dotType);
-		params.set('cornerType', cornerType);
-		params.set('cornerColor', cornerColor);
-		
-		return `${origin}${base}/v1/?${params.toString()}`;
-	});
+    let embedUrl = $derived.by(() => {
+        const params = new URLSearchParams();
+        
+        // Always include the URL
+        params.set('url', targetUrl);
+
+        // Only append other params if they differ from defaults
+        if (size !== QR_DEFAULTS.size) params.set('size', size.toString());
+        if (margin !== QR_DEFAULTS.margin) params.set('margin', margin.toString());
+        
+        // Colors
+        if (dotColor !== QR_DEFAULTS.dotColor) params.set('dotColor', dotColor);
+        if (bgColor !== QR_DEFAULTS.bgColor) params.set('bgColor', bgColor);
+        if (cornerColor !== QR_DEFAULTS.cornerColor) params.set('cornerColor', cornerColor);
+
+        // Types
+        if (dotType !== QR_DEFAULTS.dotType) params.set('dotType', dotType);
+        if (cornerType !== QR_DEFAULTS.cornerType) params.set('cornerType', cornerType);
+        
+        return `${origin}${base}/v1/?${params.toString()}`;
+    });
 
 	let iframeCode = $derived(
 		`<iframe src="${embedUrl}" width="${size}" height="${size}" scrolling="no" frameborder="0" style="border:0; overflow:hidden;"></iframe>`
