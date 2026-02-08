@@ -1,10 +1,8 @@
-<script>
+// src/routes/+page.ts
 import { redirect } from '@sveltejs/kit';
 import { base } from '$app/paths';
 
 export const load = () => {
-    // 302 (Temporary) or 301 (Permanent)
-    // We use `base` to ensure it works with your repo name (e.g. /my-repo/v1)
+    // This will throw the redirect before the page even renders
     throw redirect(302, `${base}/v1/docs`); 
 };
-</script>
