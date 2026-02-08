@@ -4,16 +4,15 @@ import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
 	preprocess: vitePreprocess(),
+
 	kit: {
 		adapter: adapter({
-			pages: 'build',
-			assets: 'build',
-			fallback: '404.html', // Essential for GitHub Pages SPA routing
-			precompress: false,
-			strict: true
+			fallback: '404.html' // Helps with direct link navigation
 		}),
 		paths: {
-			base: process.env.NODE_ENV === 'production' ? '/qr' : '',
+			// If we are in dev mode, use empty string.
+			// If we are building for production, use the env variable '/qr'
+			base: process.argv.includes('dev') ? '' : process.env.BASE_PATH
 		}
 	}
 };
